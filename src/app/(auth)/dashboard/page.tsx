@@ -31,6 +31,12 @@ interface DashboardData {
   }
 }
 
+interface SectionTime {
+  name: string
+  time: number
+  completed: boolean
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData>({
     onboardingCompleted: false,
@@ -42,16 +48,56 @@ export default function DashboardPage() {
   })
 
   useEffect(() => {
-    // Charger les données depuis localStorage
     const savedData = localStorage.getItem('dashboardData')
     if (savedData) {
       setData(JSON.parse(savedData))
     }
   }, [])
 
-  const completedSections = Object.values(data.sections).filter(Boolean).length
-  const totalSections = Object.keys(data.sections).length
+  useEffect(() => {
+    localStorage.setItem('dashboardData', JSON.stringify(data));
+  }, [data]);
+
+  const updateData = (newData: DashboardData) => {
+    setData(newData)
+    localStorage.setItem('dashboardData', JSON.stringify(newData))
+  }
+
+  const completedSections = [
+    data.onboardingCompleted,
+    ...Object.values(data.sections)
+  ].filter(Boolean).length
+
+  const totalSections = 1 + Object.keys(data.sections).length // 1 pour l'onboarding + les sections
+
   const progressPercentage = (completedSections / totalSections) * 100
+
+  useEffect(() => {
+    console.log('Données actuelles:', data)
+    console.log('Sections complétées:', completedSections)
+    console.log('Total des sections:', totalSections)
+    console.log('Progression globale:', progressPercentage)
+  }, [data])
+
+  const sectionTimes: SectionTime[] = [
+    { name: 'onboarding', time: 5, completed: data.onboardingCompleted },
+    { name: 'target', time: 60, completed: data.sections.target },
+    { name: 'offer', time: 120, completed: data.sections.offer },
+    { name: 'branding', time: 30, completed: data.sections.branding }
+  ]
+
+  const remainingTime = sectionTimes
+    .filter(section => !section.completed)
+    .reduce((total, section) => total + section.time, 0)
+
+  const formatTime = (minutes: number) => {
+    if (minutes < 60) {
+      return `${minutes} min`
+    }
+    const hours = Math.floor(minutes / 60)
+    const remainingMinutes = minutes % 60
+    return `${hours}h${remainingMinutes > 0 ? ` ${remainingMinutes}min` : ''}`
+  }
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -74,48 +120,25 @@ export default function DashboardPage() {
     }
   }
 
+  const handleCompleteSection = (sectionName: keyof DashboardData['sections'] | 'onboardingCompleted') => {
+    const newData = {
+      ...data,
+      sections: {
+        ...data.sections,
+        [sectionName]: true
+      },
+      onboardingCompleted: sectionName === 'onboardingCompleted' ? true : data.onboardingCompleted
+    };
+    updateData(newData);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/80">
       {/* Header avec statistiques */}
       <div className="border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-primary/5 border-primary/10">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Progression globale</p>
-                    <h3 className="text-2xl font-bold mt-1">{Math.round(progressPercentage)}%</h3>
-                  </div>
-                  <BarChart3 className="h-8 w-8 text-primary" />
-                </div>
-                <Progress value={progressPercentage} className="mt-4" />
-              </CardContent>
-            </Card>
-
-            <Card className="bg-primary/5 border-primary/10">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Sections complétées</p>
-                    <h3 className="text-2xl font-bold mt-1">{completedSections}/{totalSections}</h3>
-                  </div>
-                  <Trophy className="h-8 w-8 text-primary" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-primary/5 border-primary/10">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Temps estimé</p>
-                    <h3 className="text-2xl font-bold mt-1">~30 min</h3>
-                  </div>
-                  <Clock className="h-8 w-8 text-primary" />
-                </div>
-              </CardContent>
-            </Card>
+            {/* Removed completion boxes */}
           </div>
         </div>
       </div>
@@ -159,17 +182,20 @@ export default function DashboardPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "h-3 w-3 rounded-full",
-                      data.onboardingCompleted ? "bg-green-500" : "bg-orange-500"
-                    )} />
-                    <span className="text-lg font-medium">
-                      {data.onboardingCompleted ? 'Onboarding complété' : 'Onboarding à compléter'}
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "h-3 w-3 rounded-full",
+                        data.onboardingCompleted ? "bg-green-500" : "bg-orange-500"
+                      )} />
+                      <span className="text-lg font-medium">
+                        {data.onboardingCompleted ? 'Onboarding complété' : 'Onboarding à compléter'}
+                      </span>
+                    </div>
+                    <span className="text-sm text-muted-foreground">{formatTime(5)}</span>
                   </div>
                   <Button 
-                    asChild 
+                    asChild
                     size="lg" 
                     className="w-full bg-primary hover:bg-primary/90 mt-4 group-hover:scale-[1.02] transition-transform"
                   >
@@ -197,17 +223,20 @@ export default function DashboardPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "h-3 w-3 rounded-full",
-                      data.sections.target ? "bg-green-500" : "bg-orange-500"
-                    )} />
-                    <span className="text-lg font-medium">
-                      {data.sections.target ? 'Section complétée' : 'Section à compléter'}
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "h-3 w-3 rounded-full",
+                        data.sections.target ? "bg-green-500" : "bg-orange-500"
+                      )} />
+                      <span className="text-lg font-medium">
+                        {data.sections.target ? 'Section complétée' : 'Section à compléter'}
+                      </span>
+                    </div>
+                    <span className="text-sm text-muted-foreground">{formatTime(60)}</span>
                   </div>
                   <Button 
-                    asChild 
+                    asChild
                     size="lg" 
                     className="w-full bg-primary hover:bg-primary/90 mt-4 group-hover:scale-[1.02] transition-transform"
                   >
@@ -235,17 +264,20 @@ export default function DashboardPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "h-3 w-3 rounded-full",
-                      data.sections.offer ? "bg-green-500" : "bg-orange-500"
-                    )} />
-                    <span className="text-lg font-medium">
-                      {data.sections.offer ? 'Section complétée' : 'Section à compléter'}
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "h-3 w-3 rounded-full",
+                        data.sections.offer ? "bg-green-500" : "bg-orange-500"
+                      )} />
+                      <span className="text-lg font-medium">
+                        {data.sections.offer ? 'Section complétée' : 'Section à compléter'}
+                      </span>
+                    </div>
+                    <span className="text-sm text-muted-foreground">{formatTime(120)}</span>
                   </div>
                   <Button 
-                    asChild 
+                    asChild
                     size="lg" 
                     className="w-full bg-primary hover:bg-primary/90 mt-4 group-hover:scale-[1.02] transition-transform"
                   >
@@ -273,17 +305,20 @@ export default function DashboardPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "h-3 w-3 rounded-full",
-                      data.sections.branding ? "bg-green-500" : "bg-orange-500"
-                    )} />
-                    <span className="text-lg font-medium">
-                      {data.sections.branding ? 'Section complétée' : 'Section à compléter'}
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "h-3 w-3 rounded-full",
+                        data.sections.branding ? "bg-green-500" : "bg-orange-500"
+                      )} />
+                      <span className="text-lg font-medium">
+                        {data.sections.branding ? 'Section complétée' : 'Section à compléter'}
+                      </span>
+                    </div>
+                    <span className="text-sm text-muted-foreground">{formatTime(30)}</span>
                   </div>
                   <Button 
-                    asChild 
+                    asChild
                     size="lg" 
                     className="w-full bg-primary hover:bg-primary/90 mt-4 group-hover:scale-[1.02] transition-transform"
                   >
@@ -295,6 +330,47 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </motion.div>
+          </motion.div>
+
+          {/* Section Masterclass - Ligne indépendante */}
+          <motion.div 
+            className="mt-12"
+            variants={itemVariants}
+          >
+            <Card className="h-full hover:shadow-lg transition-shadow duration-300 border-primary/10 flex flex-col group">
+              <CardHeader className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                    <Trophy className="h-6 w-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-2xl font-heading">Masterclass</CardTitle>
+                </div>
+                <CardDescription>
+                  Accédez à notre formation complète pour développer votre activité
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-3 w-3 rounded-full bg-blue-500" />
+                    <span className="text-lg font-medium">
+                      Formation disponible
+                    </span>
+                  </div>
+                  <span className="text-sm text-muted-foreground">+10h de contenu</span>
+                </div>
+                <Button 
+                  asChild
+                  size="lg" 
+                  className="w-full bg-primary hover:bg-primary/90 mt-4 group-hover:scale-[1.02] transition-transform"
+                >
+                  <Link href="/masterclass">
+                    Accéder à la masterclass
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           </motion.div>
         </motion.div>
       </div>

@@ -72,5 +72,6 @@ export const RESOURCE_TYPES = {
 export const NAVIGATION = {
   main: [
     { label: 'Onboarding', path: '/onboarding' },
+    { label: 'Masterclass', path: '/masterclass' },
   ],
 } as const; 

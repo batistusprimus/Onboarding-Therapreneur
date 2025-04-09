@@ -2,6 +2,7 @@ import React from 'react'
 import type { Metadata } from 'next'
 import { Anton, Archivo_Black, Montserrat } from 'next/font/google'
 import './globals.css'
+import { Header } from '@/components/header'
 
 const anton = Anton({ 
   weight: '400',
@@ -21,15 +22,15 @@ const montserrat = Montserrat({
 })
 
 export const metadata: Metadata = {
-  title: 'Thérapreneur - Espace Client',
-  description: 'Plateforme privée pour les clients du programme Thérapreneur',
+  title: 'Thérapreneur',
+  description: 'Plateforme d\'accompagnement pour thérapeutes entrepreneurs',
 }
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="fr">
       <body className={`${anton.variable} ${archivoBlack.variable} ${montserrat.variable} font-sans bg-white`}>
